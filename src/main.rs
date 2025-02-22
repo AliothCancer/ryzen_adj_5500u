@@ -1,10 +1,10 @@
-#![allow(unused, clippy::never_loop)]
+//#![allow(unused, clippy::never_loop)]
 mod parsing_info;
 mod run_commands;
 
 use std::{thread::sleep, time::Duration};
 
-use log::{log, warn, Level};
+use log::warn;
 use parsing_info::RyzenAdjInfo;
 
 fn main() {
@@ -13,9 +13,11 @@ fn main() {
     let target_slow = 20_000;
     let mut controller = Controller::new(target_fast, target_slow);
     env_logger::init();
+    controller.reset_limit();
     loop {
         controller.update(write_data_to_csv);
-        dbg!(&controller.changes);
+        //dbg!(&controller.changes);
+        //dbg!(format!("fast_limit:{}\nfast_target{}", &controller.fast_limit, target_fast));
         if controller
             .changes
             .iter()
@@ -23,12 +25,6 @@ fn main() {
         {
             controller.reset_limit();
         }
-        //if controller.changes.iter().any(|x| matches!(x, Changes::FastValue(_))) {
-        //    controller.reset_limit();
-        //}
-
-        // DEBUG LINE
-        //break;
 
         // SLEEP TIME
         sleep(Duration::from_secs(1));
@@ -45,31 +41,36 @@ struct Controller {
     changes: Vec<Changes>,
 }
 impl Controller {
+    /// push changes onto changes field
     fn update(&mut self, write_data: bool) {
-        /// push changes onto changes field
+        self.action = State::CheckingChanges;
+
         let ryzen_adj_info = match run_commands::get_info() {
             Ok(info_output) => parsing_info::parse_ryzenadj_info(info_output),
-            Err(err) => panic!("PAnicking when getting ryzendadj info"),
+            Err(_err) => panic!("PAnicking when getting ryzendadj info"),
         };
         self.changes.clear();
 
-        if write_data{
+        if write_data {
             ryzen_adj_info.write_csv("datas/power_data.csv");
         }
 
         let RyzenAdjInfo {
-            time,
-            stapm_value,
+            time: _,
+            stapm_value: _,
             ppt_limit_fast,
             ppt_value_fast,
             ppt_limit_slow,
-            ppt_value_slow,
-            ppt_value_apu,
+            ppt_value_slow: _,
+            ppt_value_apu: _,
         } = ryzen_adj_info;
 
         // VALUES
         if self.value_fast != ppt_value_fast {
-            warn!("Fast limit changed from {} to {}", self.fast_limit, ppt_limit_fast);
+            warn!(
+                "Fast limit changed from {} to {}",
+                self.fast_limit, ppt_limit_fast
+            );
             self.changes.push(Changes::FastValue(ppt_value_fast));
         }
 
@@ -77,16 +78,14 @@ impl Controller {
         if self.fast_limit != ppt_limit_fast as u32 {
             warn!(
                 "Fast limit changed from {} to {}",
-                self.fast_limit,
-                ppt_limit_fast
+                self.fast_limit, ppt_limit_fast
             );
             self.changes.push(Changes::FastLimit(ppt_limit_fast as u32));
         }
         if self.slow_limit != ppt_limit_slow as u32 {
             warn!(
                 "Slow limit changed from {} to {}",
-                self.slow_limit,
-                ppt_limit_slow
+                self.slow_limit, ppt_limit_slow
             );
             self.changes.push(Changes::SlowLimit(ppt_limit_slow as u32));
         }
@@ -94,17 +93,17 @@ impl Controller {
     fn new(fast_target: u32, slow_target: u32) -> Self {
         let ryzen_adj_info = match run_commands::get_info() {
             Ok(info_output) => parsing_info::parse_ryzenadj_info(info_output),
-            Err(err) => panic!("PAnicking when getting ryzendadj info"),
+            Err(_err) => panic!("PAnicking when getting ryzendadj info"),
         };
 
         let RyzenAdjInfo {
-            time,
-            stapm_value,
+            time: _,
+            stapm_value: _,
             ppt_limit_fast,
             ppt_value_fast,
             ppt_limit_slow,
-            ppt_value_slow,
-            ppt_value_apu,
+            ppt_value_slow: _,
+            ppt_value_apu: _,
         } = ryzen_adj_info;
         Self {
             action: State::Nothing,
@@ -117,7 +116,8 @@ impl Controller {
         }
     }
 
-    fn reset_limit(&self) {
+    fn reset_limit(&mut self) {
+        self.action = State::ResettingRyzenAdjParams;
         run_commands::reset_fast_limit(self.fast_target);
         run_commands::reset_slow_limit(self.slow_target);
     }
@@ -129,7 +129,7 @@ enum Changes {
     SlowLimit(u32),
 }
 enum State {
-    Reading,
-    Writing,
+    CheckingChanges,
+    ResettingRyzenAdjParams,
     Nothing,
 }
