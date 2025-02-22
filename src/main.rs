@@ -4,21 +4,22 @@ mod run_commands;
 
 use std::{thread::sleep, time::Duration};
 
-use log::{log, Level};
+use log::{log, warn, Level};
 use parsing_info::RyzenAdjInfo;
 
 fn main() {
+    let write_data_to_csv = true;
     let target_fast = 20_000;
     let target_slow = 20_000;
     let mut controller = Controller::new(target_fast, target_slow);
-
+    env_logger::init();
     loop {
-        controller.update();
+        controller.update(write_data_to_csv);
         dbg!(&controller.changes);
         if controller
             .changes
             .iter()
-            .any(|x| matches!(x, Changes::Fast(_) | Changes::Slow(_)))
+            .any(|x| matches!(x, Changes::FastLimit(_) | Changes::SlowLimit(_)))
         {
             controller.reset_limit();
         }
@@ -44,14 +45,20 @@ struct Controller {
     changes: Vec<Changes>,
 }
 impl Controller {
-    fn update(&mut self) {
+    fn update(&mut self, write_data: bool) {
         /// push changes onto changes field
         let ryzen_adj_info = match run_commands::get_info() {
             Ok(info_output) => parsing_info::parse_ryzenadj_info(info_output),
             Err(err) => panic!("PAnicking when getting ryzendadj info"),
         };
         self.changes.clear();
+
+        if write_data{
+            ryzen_adj_info.write_csv("datas/power_data.csv");
+        }
+
         let RyzenAdjInfo {
+            time,
             stapm_value,
             ppt_limit_fast,
             ppt_value_fast,
@@ -62,28 +69,26 @@ impl Controller {
 
         // VALUES
         if self.value_fast != ppt_value_fast {
-            //log!(Level::Warn,"Fast limit changed from {} to {}", self.fast_limit, ppt_limit_fast);
+            warn!("Fast limit changed from {} to {}", self.fast_limit, ppt_limit_fast);
             self.changes.push(Changes::FastValue(ppt_value_fast));
         }
 
         // LIMITS
         if self.fast_limit != ppt_limit_fast as u32 {
-            log!(
-                Level::Warn,
+            warn!(
                 "Fast limit changed from {} to {}",
                 self.fast_limit,
                 ppt_limit_fast
             );
-            self.changes.push(Changes::Fast(ppt_limit_fast as u32));
+            self.changes.push(Changes::FastLimit(ppt_limit_fast as u32));
         }
         if self.slow_limit != ppt_limit_slow as u32 {
-            log!(
-                Level::Warn,
+            warn!(
                 "Slow limit changed from {} to {}",
                 self.slow_limit,
                 ppt_limit_slow
             );
-            self.changes.push(Changes::Slow(ppt_limit_slow as u32));
+            self.changes.push(Changes::SlowLimit(ppt_limit_slow as u32));
         }
     }
     fn new(fast_target: u32, slow_target: u32) -> Self {
@@ -93,6 +98,7 @@ impl Controller {
         };
 
         let RyzenAdjInfo {
+            time,
             stapm_value,
             ppt_limit_fast,
             ppt_value_fast,
@@ -118,9 +124,9 @@ impl Controller {
 }
 #[derive(Debug, PartialEq, PartialOrd)]
 enum Changes {
-    Fast(u32),
+    FastLimit(u32),
     FastValue(f32),
-    Slow(u32),
+    SlowLimit(u32),
 }
 enum State {
     Reading,
