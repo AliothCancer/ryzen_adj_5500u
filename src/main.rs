@@ -8,7 +8,7 @@ use parsing_info::RyzenAdjInfo;
 
 fn main() {
     let write_data_to_csv = false;
-    let target_fast = 17; // = 17_000 mW
+    let target_fast = 15_000; // mW
     let target_slow = target_fast;
     let mut controller = Controller::new(target_fast, target_slow);
     env_logger::init();
@@ -24,10 +24,10 @@ fn main() {
             .iter()
             .any(|x| matches!(x, Changes::FastLimit(_) | Changes::SlowLimit(_)))
         {
-            //dbg!(&controller);
             controller.reset_limit();
-            //dbg!(&controller);
             controller.changes.clear();
+            //dbg!(&controller);
+            //dbg!(&controller);
             //dbg!(&controller);
             //break;
         }
@@ -79,6 +79,7 @@ impl Controller {
             //    self.fast_limit, ppt_limit_fast
             //);
             self.changes.push(Changes::FastValue(ppt_value_fast));
+            
         }
 
         // LIMITS
@@ -88,6 +89,7 @@ impl Controller {
             //    self.fast_limit, ppt_limit_fast
             //);
             self.changes.push(Changes::FastLimit(ppt_limit_fast as u32));
+            self.fast_limit = ppt_limit_fast as u32;
         }
         if self.slow_limit != ppt_limit_slow as u32 {
             //println!(
@@ -95,6 +97,7 @@ impl Controller {
             //    self.slow_limit, ppt_limit_slow
             //);
             self.changes.push(Changes::SlowLimit(ppt_limit_slow as u32));
+            self.slow_limit = ppt_limit_slow as u32;
         }
     }
     fn new(fast_target: u32, slow_target: u32) -> Self {
@@ -131,7 +134,7 @@ impl Controller {
 }
 #[derive(Debug, PartialEq, PartialOrd)]
 enum Changes {
-    FastLimit(u32),
+    FastLimit(u32), // they carry the new value of the changed param
     FastValue(f32),
     SlowLimit(u32),
 }

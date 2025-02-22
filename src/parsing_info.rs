@@ -37,14 +37,12 @@ pub fn parse_ryzenadj_info(cmd_output: String) -> RyzenAdjInfo {
                     .unwrap()
             };
 
-            let stapm_value = extract_and_parse_info(stapm_value_raw);
-            let ppt_limit_fast = extract_and_parse_info(ppt_limit_fast_raw);
-            let ppt_value_fast = extract_and_parse_info(ppt_value_fast_raw);
-
-            let ppt_limit_slow = extract_and_parse_info(ppt_limit_slow_raw);
-            let ppt_value_slow = extract_and_parse_info(ppt_value_slow_raw);
-
-            let ppt_value_apu = extract_and_parse_info(ppt_value_apu_raw);
+            let stapm_value = extract_and_parse_info(stapm_value_raw)*1000.0;
+            let ppt_limit_fast = extract_and_parse_info(ppt_limit_fast_raw)*1000.0;
+            let ppt_value_fast = extract_and_parse_info(ppt_value_fast_raw)*1000.0;
+            let ppt_limit_slow = extract_and_parse_info(ppt_limit_slow_raw)*1000.0;
+            let ppt_value_slow = extract_and_parse_info(ppt_value_slow_raw)*1000.0;
+            let ppt_value_apu = extract_and_parse_info(ppt_value_apu_raw)*1000.0;
 
             // Get the time and format it
             let time_now = Local::now();
