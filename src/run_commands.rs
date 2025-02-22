@@ -1,5 +1,4 @@
-use log::debug;
-use std::io::{self, Write};
+use std::io::{self};
 use std::process::Command;
 
 pub fn get_info() -> Result<String, io::Error> {

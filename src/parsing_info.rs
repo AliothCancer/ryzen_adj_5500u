@@ -1,16 +1,15 @@
 use std::{
     fs::{File, OpenOptions},
     io::{stdin, stdout, Write},
-    os::unix::process,
     path::Path,
 };
 
 use chrono::Local;
-use log::{log, warn};
-use serde::{self, Deserialize, Serialize};
+use log::warn;
+use serde::{self, Serialize};
 
+/// Parse the string output of "sudo $HOME/.local/bin/ryzenadj -i"
 pub fn parse_ryzenadj_info(cmd_output: String) -> RyzenAdjInfo {
-    /// Parse the string output of "sudo $HOME/.local/bin/ryzenadj -i"
     let params = [
         "STAPM VALUE",
         "PPT LIMIT FAST",
@@ -81,7 +80,7 @@ impl RyzenAdjInfo {
     pub fn write_csv(&self, file_path: impl AsRef<Path>) {
         match std::fs::File::open(&file_path) {
             Ok(_) => {
-                let mut file = OpenOptions::new().append(true).open(file_path).unwrap();
+                let file = OpenOptions::new().append(true).open(file_path).unwrap();
                 let mut wtr = csv::WriterBuilder::new()
                     .has_headers(false)
                     .from_writer(file);
@@ -99,7 +98,7 @@ impl RyzenAdjInfo {
                     "n" => (),
                     _ => {
                         create_file(&file_path);
-                        let mut file = OpenOptions::new().append(true).open(&file_path).unwrap();
+                        let file = OpenOptions::new().append(true).open(&file_path).unwrap();
                         let mut wtr = csv::WriterBuilder::new()
                             .has_headers(true)
                             .from_writer(file);
