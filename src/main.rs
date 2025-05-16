@@ -8,13 +8,10 @@ use parsing_info::RyzenAdjInfo;
 
 fn main() {
     let write_data_to_csv = false;
-    let target_fast = 15_000; // mW
+    let target_fast = 30_000; // mW
     let target_slow = target_fast;
     let mut controller = Controller::new(target_fast, target_slow);
     env_logger::init();
-    sleep(Duration::from_secs(1));
-    controller.reset_limit();
-    sleep(Duration::from_secs(1));
     loop {
         controller.update(write_data_to_csv);
         //dbg!(&controller.changes);
@@ -56,7 +53,6 @@ impl Controller {
             Ok(info_output) => parsing_info::parse_ryzenadj_info(info_output),
             Err(_err) => panic!("PAnicking when getting ryzendadj info"),
         };
-        
 
         if write_data {
             ryzen_adj_info.write_csv("datas/power_data.csv");
@@ -79,7 +75,6 @@ impl Controller {
             //    self.fast_limit, ppt_limit_fast
             //);
             self.changes.push(Changes::FastValue(ppt_value_fast));
-            
         }
 
         // LIMITS
